@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct StockEchoAppApp: App {
+    // Create shared AppState for the app
+    @StateObject private var appState = AppState()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            FeedView(appState: appState)
+                .environmentObject(appState)
         }
     }
 }

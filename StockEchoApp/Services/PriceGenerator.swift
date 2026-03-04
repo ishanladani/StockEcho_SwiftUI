@@ -66,6 +66,17 @@ public final class PriceGenerator {
     }
 
     private func tick() {
+        #if DEBUG
+        print("PriceGenerator -> tick")
+        #endif
+
+        // Ensure websocket is connected; if not, attempt to connect so messages will be echoed back.
+        if !webSocket.isConnected {
+            #if DEBUG
+            print("PriceGenerator -> websocket not connected, requesting connect()")
+            #endif
+            webSocket.connect()
+        }
         let symbols = priceProvider()
         for s in symbols {
             let newPrice = generateNextPrice(basedOn: s.currentPrice)
@@ -76,6 +87,10 @@ public final class PriceGenerator {
             do {
                 let data = try jsonEncoder.encode(update)
                 if let jsonString = String(data: data, encoding: .utf8) {
+                    // Debug log for outgoing message
+                    #if DEBUG
+                    print("PriceGenerator -> sending: \(jsonString)")
+                    #endif
                     webSocket.send(jsonString)
                 }
             } catch {

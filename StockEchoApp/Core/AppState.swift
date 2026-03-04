@@ -41,11 +41,7 @@ final class InMemoryWebSocketManager: WebSocketManaging {
 }
 
 
-private struct PriceUpdate: Codable {
-    let symbol: String
-    let price: Double
-}
-
+// Note: `PriceUpdate` is declared in `Services/PriceGenerator.swift`; AppState decodes incoming JSON using that type.
 
 final class AppState: ObservableObject {
     @Published private(set) var symbols: [StockSymbol]
@@ -104,11 +100,21 @@ final class AppState: ObservableObject {
     // MARK: - Message handling
 
     private func handleIncomingMessage(_ message: String) {
+        #if DEBUG
+        print("AppState <- raw message: \(message)")
+        #endif
+
         guard let data = message.data(using: .utf8) else { return }
         do {
             let update = try JSONDecoder().decode(PriceUpdate.self, from: data)
+            #if DEBUG
+            print("AppState <- decoded update: symbol=\(update.symbol) price=\(update.price)")
+            #endif
             applyPriceUpdate(symbol: update.symbol, price: update.price)
         } catch {
+            #if DEBUG
+            print("AppState -> failed to decode incoming message: \(error)")
+            #endif
         }
     }
 
@@ -116,6 +122,9 @@ final class AppState: ObservableObject {
         
         guard let index = symbols.firstIndex(where: { $0.symbol == symbol }) else { return }
         let target = symbols[index]
+        #if DEBUG
+        print("AppState -> applying update for \(symbol): old=\(target.currentPrice) new=\(price)")
+        #endif
         let updated = target.updatingPrice(to: price)
 
         var newSymbols = symbols
@@ -128,7 +137,7 @@ final class AppState: ObservableObject {
     // MARK: - Helpers
 
     private static func makeInitialSymbols() -> [StockSymbol] {
-        var rng = SeededGenerator(seed: 42)
+        var rng = DeterministicSeededGenerator(seed: 42)
         let list = predefinedSymbols.map { symbol in
             let price = Double.random(in: 50...2000, using: &rng)
             return StockSymbol(symbol: symbol, name: symbol + " Inc.", currentPrice: price)
@@ -138,7 +147,7 @@ final class AppState: ObservableObject {
 }
 
 // MARK: - Seeded RNG for deterministic sample data
-private struct SeededGenerator: RandomNumberGenerator {
+private struct DeterministicSeededGenerator: RandomNumberGenerator {
     // Xorshift64* implementation
     private var state: UInt64
     init(seed: UInt64) { state = seed == 0 ? 0x4d595df4d0f33173 : seed }

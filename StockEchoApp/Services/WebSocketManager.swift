@@ -89,6 +89,9 @@ public final class WebSocketManager: WebSocketManaging {
             guard let task = self.webSocketTask else {
                 // Buffer outgoing message until connected
                 self.outgoingBuffer.append(text)
+                #if DEBUG
+                print("WebSocketManager -> buffered message (not connected yet): \(text)")
+                #endif
                 // Try to connect proactively
                 self.connect()
                 return
@@ -118,9 +121,15 @@ public final class WebSocketManager: WebSocketManaging {
                 case .success(let message):
                     switch message {
                     case .string(let text):
+                        #if DEBUG
+                        print("WebSocketManager <- received string: \(text)")
+                        #endif
                         self.messageSubject.send(text)
                     case .data(let data):
                         if let text = String(data: data, encoding: .utf8) {
+                            #if DEBUG
+                            print("WebSocketManager <- received data: \(text)")
+                            #endif
                             self.messageSubject.send(text)
                         }
                     @unknown default:
